@@ -12,6 +12,11 @@
 set -euo pipefail
 #set -x
 
+if [ "$(id -u)" -ne 0 ]; then
+    echo "This script must be run as root (e.g. via sudo)." >&2
+    exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR="${SCRIPT_DIR}/work"
 DIST_DIR="${SCRIPT_DIR}/dist"
@@ -24,7 +29,7 @@ MIRROR="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_BRANCH}"
 IMG_SIZE="${IMG_SIZE:-1200M}"
 SASS_HOSTNAME="${SASS_HOSTNAME:-sendspin}"
 SLIM_BUILD="${SLIM_BUILD:-true}"
-SASS_VERSION="${SASS_VERSION:-$(git -C "${SCRIPT_DIR}" describe --abbrev=4 --dirty --always --tags 2>/dev/null || echo dev)}"
+SASS_VERSION="${SASS_VERSION:-$(git -C "${SCRIPT_DIR}" describe --abbrev=7 --dirty --always --tags 2>/dev/null || echo dev)}"
 DISK_ID="${DISK_ID:-0x00000666}" # must match PARTUUID=00000666-0N in card_skeleton
 
 OUTPUT_NAME="${1:-sass-${SASS_VERSION}-${ALPINE_ARCH}}"
