@@ -1,4 +1,4 @@
 # <fs>              <mountpoint>  <type>  <opts>                 <dump/pass>
-PARTUUID=00000666-01 /boot        vfat    noauto,noatime         0 2
-PARTUUID=00000666-02 /            ext4    noatime                0 1
+PARTUUID=53415353-01 /boot        vfat    noauto,noatime         0 2
+PARTUUID=53415353-02 /            ext4    noatime                0 1
 tmpfs                /tmp         tmpfs   nosuid,nodev,size=64m  0 0

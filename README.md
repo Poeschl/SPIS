@@ -30,7 +30,7 @@ Download the latest image from [Releases](https://github.com/Poeschl/SAS/release
 
 **Linux/macOS:**
 ```bash
-dd if=sass-0.1.0-armv7.img of=/dev/sdX bs=4M status=progress
+dd if=sass-0.1.0-aarch64.img of=/dev/sdX bs=4M status=progress
 sync
 ```
 
@@ -51,8 +51,8 @@ Use [Rufus](https://rufus.ie/)
 
 Every tagged push (`v*`) triggers `.github/workflows/build-image.yml`, which builds a ready-to-flash image and publishes it as a GitHub Release:
 
-- `sass-<version>-armv7.img.xz` - the flashable image
-- `sass-<version>-armv7-CREDENTIALS.txt` - the random root password generated for that build (you'll be forced to change it on first login)
+- `sass-<version>-aarch64.img.xz` - the flashable image
+- `sass-<version>-aarch64-CREDENTIALS.txt` - the random root password generated for that build (you'll be forced to change it on first login)
 - `version-info` - build version metadata
 
 ### Manual Installation

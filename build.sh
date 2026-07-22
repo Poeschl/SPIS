@@ -23,14 +23,14 @@ DIST_DIR="${SCRIPT_DIR}/dist"
 ROOTFS="${WORK_DIR}/root"
 
 ALPINE_BRANCH="${ALPINE_BRANCH:-3.24}"
-ALPINE_ARCH="${ALPINE_ARCH:-armv7}"
+ALPINE_ARCH="${ALPINE_ARCH:-aarch64}"
 MIRROR="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_BRANCH}"
 
-IMG_SIZE="${IMG_SIZE:-1200M}"
+IMG_SIZE="${IMG_SIZE:-3000M}"
 SASS_HOSTNAME="${SASS_HOSTNAME:-sendspin}"
 SLIM_BUILD="${SLIM_BUILD:-true}"
 SASS_VERSION="${SASS_VERSION:-$(git -C "${SCRIPT_DIR}" describe --abbrev=7 --dirty --always --tags 2>/dev/null || echo dev)}"
-DISK_ID="${DISK_ID:-0x00000666}" # must match PARTUUID=00000666-0N in card_skeleton
+DISK_ID="${DISK_ID:-0x53415353}" # "SASS" in ASCII hex; must match PARTUUID=53415353-0N in card_skeleton
 
 OUTPUT_NAME="${1:-sass-${SASS_VERSION}-${ALPINE_ARCH}}"
 IMG_FILE="${WORK_DIR}/${OUTPUT_NAME}.img"
@@ -124,13 +124,6 @@ SASS_HOSTNAME="${SASS_HOSTNAME}"
 SASS_VERSION="${SASS_VERSION}"
 SLIM_BUILD="${SLIM_BUILD}"
 EOF
-
-# Fallback QEMU binary in case the kernel lacks AArch32 compat support
-if [ "${HOST_ARCH}" != "armv7" ] && [ "${HOST_ARCH}" != "armv7l" ] && command -v qemu-arm-static >/dev/null 2>&1; then
-    echo "### !!! Using qemu arm emulation"
-    mkdir -p "${ROOTFS}/usr/bin"
-    cp "$(command -v qemu-arm-static)" "${ROOTFS}/usr/bin/qemu-arm-static"
-fi
 
 echo "==> Chroot in and run the non-interactive install"
 mount -t proc proc "${ROOTFS}/proc"

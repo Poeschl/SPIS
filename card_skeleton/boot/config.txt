@@ -12,12 +12,16 @@ disable_splash=1
 boot_delay=0
 
 [pi3]
-kernel=boot/vmlinuz-rpi
-initramfs boot/initramfs-rpi
+kernel=vmlinuz-rpi
+initramfs initramfs-rpi
 
 [pi4]
-kernel=boot/vmlinuz-rpi
-initramfs boot/initramfs-rpi
+kernel=vmlinuz-rpi
+initramfs initramfs-rpi
 arm_boost=1
 
 [all]
+arm_64bit=1
+# Physically enable the primary UART (needed for the serial console already
+# requested in cmdline.txt) so boot failures can be diagnosed over serial.
+enable_uart=1
