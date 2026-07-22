@@ -1,6 +1,6 @@
 # SPIS
 
-Simple PI SendSpin
+Simple PI SendSpin client
 
 A minimal Raspberry Pi OS Lite image for Raspberry Pi that runs [SendSpin](https://github.com/Sendspin/sendspin-cli) - a high-quality audio streaming protocol for Home Assistant's Music Assistant.
 
@@ -17,8 +17,6 @@ A minimal Raspberry Pi OS Lite image for Raspberry Pi that runs [SendSpin](https
 
 - Raspberry Pi 3 Model B / B+
 - Raspberry Pi 4 Model B
-- Onboard 3.5mm headphone jack (default output)
-- USB Audio DACs (optional, USB Audio Class compliant devices)
 
 ## Quick Start
 
@@ -51,6 +49,50 @@ Use [Rufus](https://rufus.ie/) or the [Raspberry PI Imager](https://www.raspberr
 4. The player will automatically connect to Music Assistant on your network
 5. Default credentials: `root` / a randomly generated password published alongside the release as `*-CREDENTIALS.txt` (change immediately!)
 
+## Configuration
+
+### Network Configuration
+
+**Ethernet:** Works automatically via DHCP
+
+**WiFi:** SSH into the device and configure via the points below
+
+### Enabling WiFi
+
+1. SSH into the device (via Ethernet, or a monitor/keyboard connected directly)
+2. Set the WiFi country (required before the radio can be used, see [Troubleshooting](#wi-fi-blocked-by-rfkill) below):
+   ```bash
+   raspi-config
+   ```
+   Navigate to `5 Localisation Options` → `L4 WLAN Country` and select your country.
+3. Connect to a network using `nmtui` (interactive) or `nmcli`:
+   ```bash
+   nmtui
+   # or non-interactively:
+   nmcli connect "SSID" password "your-password"
+   ```
+4. Verify the connection:
+   ```bash
+   nmcli device status
+   ip a
+   ```
+
+### Hostname
+
+Changing the hostname also changes the name of the SendSpin device in Music Assistant.
+
+```bash
+hostnamectl set-hostname mynewname
+```
+
+### Audio Device
+
+By default, the system uses the onboard 3.5mm headphone jack (ALSA card `Headphones`). To use a USB DAC or another device instead:
+
+1. List audio devices: `aplay -l`
+2. Edit `/etc/asound.conf` and change the config to your device's card number
+3. Restart sendspin: `systemctl restart sendspin`
+
 ## Building from Source
 
 ### Automated Build (GitHub Actions)
@@ -70,68 +112,6 @@ This method is recommended if you want to:
 - Understand how the system works
 - Build for different hardware configurations
 - Troubleshoot issues
-
-## Configuration
-
-### Network Configuration
-
-**Ethernet:** Works automatically via DHCP
-
-**WiFi:** SSH into the device and configure via the points below
-
-### Enabling WiFi
-
-1. SSH into the device (via Ethernet, or a monitor/keyboard connected directly)
-2. Set the WiFi country (required before the radio can be used, see [Troubleshooting](#wi-fi-blocked-by-rfkill) below):
-   ```bash
-   sudo raspi-config
-   ```
-   Navigate to `5 Localisation Options` → `L4 WLAN Country` and select your country.
-3. Connect to a network using `nmtui` (interactive) or `nmcli`:
-   ```bash
-   sudo nmtui
-   # or non-interactively:
-   sudo nmcli device wifi connect "SSID" password "your-password"
-   ```
-4. Verify the connection:
-   ```bash
-   nmcli device status
-   ip a
-   ```
-
-### Hostname
-
-```bash
-hostnamectl set-hostname mynewname
-```
-
-### Audio Device
-
-By default, the system uses the onboard 3.5mm headphone jack (ALSA card `Headphones`). To use a USB DAC or another device instead:
-
-1. List audio devices: `aplay -l`
-2. Edit `/etc/asound.conf` and change the config to your device's card number
-3. Restart sendspin: `systemctl restart sendspin`
-
-## Project Structure
-
-```
-SPIS/
-├── build.sh                    # Main build script (downloads + customizes the SD card image)
-├── .github/workflows/
-│   └── build-image.yml         # CI: builds + releases the image on tag push
-├── config/
-│   ├── packages.txt            # Top-level list of apt packages to install
-│   ├── build-deps.txt          # Build-only apt packages removed in slim builds
-│   ├── config-append.txt       # Audio/boot tuning appended to config.txt
-│   └── setup-chroot.sh         # Non-interactive install, run inside the chroot
-├── card_skeleton/               # Mirrors the target rootfs 1:1, rsync'd onto
-│   │                            # the image as-is (paths below == final paths)
-│   └── etc/
-│       ├── systemd/system/sendspin.service  # systemd service for sendspin
-│       └── asound.conf          # ALSA audio configuration
-└── dist/                       # Build artifacts (.img.xz, credentials)
-```
 
 ## Troubleshooting
 
