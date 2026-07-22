@@ -102,7 +102,8 @@ mount "${LOOP_DEV}p1" "${ROOTFS}/boot"
     --root "${ROOTFS}" --initdb add alpine-base
 
 # Mirror card_skeleton/ onto the rootfs
-rsync -a "${SCRIPT_DIR}/card_skeleton/" "${ROOTFS}/"
+# No permissions are allowed here, since the boot partition doesn't support this
+rsync -a --no-owner --no-group "${SCRIPT_DIR}/card_skeleton/" "${ROOTFS}/"
 
 sed -i "s/__ALPINE_BRANCH__/${ALPINE_BRANCH}/g" "${ROOTFS}/etc/apk/repositories"
 chmod +x "${ROOTFS}/etc/init.d/sendspin"
@@ -166,8 +167,7 @@ fi
 losetup -d "${LOOP_DEV}"
 LOOP_DEV=""
 
-# Compress the raw image with xz, ready to extract and dd (or use with
-# Raspberry Pi Imager / balenaEtcher, both accept .img.xz directly)
+# Compress the raw image with xz
 xz -T0 -f "${IMG_FILE}"
 mv "${IMG_FILE}.xz" "${DIST_DIR}/${OUTPUT_NAME}.img.xz"
 
