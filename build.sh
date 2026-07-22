@@ -152,6 +152,7 @@ umount -fl "${ROOTFS}/tmp"
 echo "==> Retrieve credentials and cleanup"
 if [ -f "${ROOTFS}/CREDENTIALS.txt" ]; then
     cp "${ROOTFS}/CREDENTIALS.txt" "${DIST_DIR}/${OUTPUT_NAME}-CREDENTIALS.txt"
+    chmod 644 "${DIST_DIR}/${OUTPUT_NAME}-CREDENTIALS.txt"
     rm -f "${ROOTFS}/CREDENTIALS.txt"
 fi
 
