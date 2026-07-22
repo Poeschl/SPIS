@@ -7,11 +7,10 @@ Wants=network-online.target systemd-udev-settle.service
 [Service]
 Type=simple
 User=root
-# sound.target is reached as soon as the sound subsystem is present, not once
-# a card has actually enumerated (onboard audio and USB DACs can lag a bit at
-# boot), so PortAudio's ALSA host API can fail to initialize if we start too
-# early. Wait for at least one ALSA card to show up before starting.
+# Wait for at least one ALSA card to show up before starting.
 ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do [ -s /proc/asound/cards ] && exit 0; sleep 1; done; echo "No ALSA card detected after 30s, starting anyway" >&2; exit 0'
+# Fix every ALSA mixer control (Master/PCM/Headphone/etc, on every detected card) to 100% and unmuted
+ExecStartPre=/usr/local/sbin/set-audio-volume.sh
 ExecStart=/usr/local/bin/sendspin --headless
 Restart=on-failure
 RestartSec=5

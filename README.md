@@ -71,7 +71,7 @@ This method is recommended if you want to:
 
 **Ethernet:** Works automatically via DHCP
 
-**WiFi:** SSH into the device and configure via `nmtui` or `nmcli` (NetworkManager, shipped with Raspberry Pi OS)
+**WiFi:** SSH into the device and configure via the points below
 
 ### Enabling WiFi
 
@@ -104,7 +104,7 @@ hostnamectl set-hostname mynewname
 By default, the system uses the onboard 3.5mm headphone jack (ALSA card `Headphones`). To use a USB DAC or another device instead:
 
 1. List audio devices: `aplay -l`
-2. Edit `/etc/asound.conf` and change `Headphones` to your device's card name or number
+2. Edit `/etc/asound.conf` and change the config to your device's card number
 3. Restart sendspin: `systemctl restart sendspin`
 
 ## Project Structure

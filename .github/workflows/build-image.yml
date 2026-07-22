@@ -51,7 +51,6 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           append_body: true
-          body_path: dist/version-info
           files: |
             dist/*.img.xz
             dist/*-CREDENTIALS.txt
