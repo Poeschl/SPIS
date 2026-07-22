@@ -17,10 +17,12 @@ apk update
 # shellcheck disable=SC2046
 apk add --no-cache $(grep -vE '^\s*#|^\s*$' /tmp/packages.txt)
 
+echo "====> Install sendspin"
 pip install --no-cache-dir sendspin --break-system-packages
 
 chmod +x /etc/init.d/sendspin
 
+echo "====> Config doas and hostname"
 mkdir -p /etc/doas.d
 echo "permit persist :wheel" > /etc/doas.d/doas.conf
 
