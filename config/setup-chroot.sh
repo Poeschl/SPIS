@@ -4,13 +4,14 @@
 # Runs inside the target rootfs via `chroot`. Kept separate from the
 # interactive `setup-alpine` wizard so the whole install is reproducible.
 
-set -eux
+set -eu
 
 . /build.env
 : "${SASS_HOSTNAME:=sendspin}"
 : "${SASS_VERSION:=dev}"
 : "${SLIM_BUILD:=true}"
 
+echo "====> Install packages"
 apk update
 
 # shellcheck disable=SC2046
@@ -29,12 +30,14 @@ cat > /etc/hosts <<EOF
 ::1       localhost ${SASS_HOSTNAME}
 EOF
 
+echo "====> Setup tzdata"
 # tzdata is only needed transiently to seed /etc/localtime, drop it again
 apk add --no-cache tzdata
 cp "/usr/share/zoneinfo/UTC" /etc/localtime
 echo "UTC" > /etc/timezone
 apk del tzdata
 
+echo "====> Setup alpine system (non-interactive setup-alpine)"
 # setup-alpine normally wires these up interactively; do it explicitly since
 # nothing else will enable the services on first boot
 rc-update add mdev sysinit
@@ -57,7 +60,7 @@ rc-update add mount-ro shutdown
 rc-update add killprocs shutdown
 rc-update add savecache shutdown
 
-# Never ship identical SSH host keys on every image - regenerate per device
+echo "====> Generate ssh host keys"
 rm -f /etc/ssh/ssh_host_*
 mkdir -p /etc/local.d
 cat > /etc/local.d/00-sshkeys.start <<'EOF'
@@ -69,8 +72,8 @@ fi
 EOF
 chmod +x /etc/local.d/00-sshkeys.start
 
-# Random per-build root password instead of a shared default, must be
-# changed on first login so it isn't left in place long-term
+echo "====> Generate initial root password"
+# must be changed on first login so it isn't left in place long-term
 SASS_ROOT_PASSWORD="$(head -c 18 /dev/urandom | base64 | tr -d '=+/' | cut -c1-16)"
 echo "root:${SASS_ROOT_PASSWORD}" | chpasswd
 passwd -e root >/dev/null 2>&1 || true
@@ -84,12 +87,14 @@ chmod 600 /root/CREDENTIALS.txt
 # build.sh pulls this out to publish alongside the release artifact
 cp /root/CREDENTIALS.txt /CREDENTIALS.txt
 
+echo "====> Setup motd"
 cat > /etc/motd <<EOF
 SASS - Simple Alpine SendSpin, version ${SASS_VERSION}
 See /root/CREDENTIALS.txt for the initial root password.
 EOF
 
-# Shrink the image, these packages are only needed to compile Python deps
+echo "====> Cleanup"
+# Remove build-deps.txt packages
 if [ "${SLIM_BUILD}" = "true" ]; then
     # shellcheck disable=SC2046
     apk del $(grep -vE '^\s*#|^\s*$' /tmp/build-deps.txt) || true

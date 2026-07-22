@@ -72,6 +72,7 @@ tar -xz -f "${WORK_DIR}/apk-tools-static.apk" -C "${WORK_DIR}" sbin/apk.static
 mv "${WORK_DIR}/sbin/apk.static" "${APK_STATIC}"
 chmod +x "${APK_STATIC}"
 
+echo "==> Create partitions"
 # Create + partition the disk image (p1 = FAT32 boot, p2 = ext4 root)
 truncate -s "${IMG_SIZE}" "${IMG_FILE}"
 
@@ -95,13 +96,13 @@ mount "${LOOP_DEV}p2" "${ROOTFS}"
 mkdir -p "${ROOTFS}/boot"
 mount "${LOOP_DEV}p1" "${ROOTFS}/boot"
 
-# Bootstrap a minimal Alpine rootfs for the target arch
+echo "==> Bootstrap minimal alpine root fs"
 "${APK_STATIC}" \
     -X "${MIRROR}/main" -X "${MIRROR}/community" \
     --arch "${ALPINE_ARCH}" -U --allow-untrusted \
     --root "${ROOTFS}" --initdb add alpine-base
 
-# Mirror card_skeleton/ onto the rootfs
+echo "==> Mirror card_skeleton/ onto the rootfs"
 # No permissions are allowed here, since the boot partition doesn't support this
 rsync -a --no-owner --no-group "${SCRIPT_DIR}/card_skeleton/" "${ROOTFS}/"
 
@@ -121,11 +122,12 @@ EOF
 
 # Fallback QEMU binary in case the kernel lacks AArch32 compat support
 if [ "${HOST_ARCH}" != "armv7" ] && [ "${HOST_ARCH}" != "armv7l" ] && command -v qemu-arm-static >/dev/null 2>&1; then
+    echo "### !!! Using qemu arm emulation"
     mkdir -p "${ROOTFS}/usr/bin"
     cp "$(command -v qemu-arm-static)" "${ROOTFS}/usr/bin/qemu-arm-static"
 fi
 
-# Chroot in and run the non-interactive install
+echo "==> Chroot in and run the non-interactive install"
 mount -t proc proc "${ROOTFS}/proc"
 mount -t sysfs sysfs "${ROOTFS}/sys"
 mount --bind /dev "${ROOTFS}/dev"
@@ -136,7 +138,7 @@ umount -fl "${ROOTFS}/proc"
 umount -fl "${ROOTFS}/sys"
 umount -fl "${ROOTFS}/dev"
 
-# Pull the first-boot credentials out to publish alongside the image
+echo "==> Retrieve credentials and cleanup"
 if [ -f "${ROOTFS}/CREDENTIALS.txt" ]; then
     cp "${ROOTFS}/CREDENTIALS.txt" "${DIST_DIR}/${OUTPUT_NAME}-CREDENTIALS.txt"
     rm -f "${ROOTFS}/CREDENTIALS.txt"
@@ -144,14 +146,16 @@ fi
 
 rm -f "${ROOTFS}/usr/bin/qemu-arm-static"
 
-# Re-apply config.txt / cmdline.txt last so apk can't clobber them
+# Do this at last to ensure boot of the pi
+echo "==> Re-apply config.txt / cmdline.txt"
 install -m 644 "${SCRIPT_DIR}/card_skeleton/boot/config.txt" "${ROOTFS}/boot/config.txt"
 install -m 644 "${SCRIPT_DIR}/card_skeleton/boot/cmdline.txt" "${ROOTFS}/boot/cmdline.txt"
 
 echo "SASS version: ${SASS_VERSION}" > "${ROOTFS}/version-info"
 cp "${ROOTFS}/version-info" "${DIST_DIR}/version-info"
 
-# Shrink the image: zero-fill boot free space, trim+zero root
+echo "==> Shrink the image"
+# zero-fill boot free space, trim+zero root
 dd if=/dev/zero of="${ROOTFS}/boot/.zero" bs=1M 2>/dev/null || true
 rm -f "${ROOTFS}/boot/.zero"
 fstrim -v "${ROOTFS}" || true
@@ -167,7 +171,7 @@ fi
 losetup -d "${LOOP_DEV}"
 LOOP_DEV=""
 
-# Compress the raw image with xz
+echo "==> Compress the image"
 xz -T0 -f "${IMG_FILE}"
 mv "${IMG_FILE}.xz" "${DIST_DIR}/${OUTPUT_NAME}.img.xz"
 
