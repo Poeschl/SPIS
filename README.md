@@ -5,7 +5,8 @@ A minimal Alpine Linux image for Raspberry Pi that runs [SendSpin](https://githu
 ## Features
 
 - **Minimal footprint** - Runs Alpine Linux in sys mode with only essential packages
-- **USB DAC support** - Automatic ALSA configuration for USB audio devices
+- **Onboard audio by default** - Uses the Raspberry Pi's 3.5mm headphone jack out of the box, no extra hardware required
+- **Optional USB DAC support** - Switch to a USB audio device via `/etc/asound.conf` if you want higher-quality output
 - **Auto-start service** - SendSpin starts automatically on boot in headless mode
 - **Low latency** - Direct ALSA hardware access for minimal audio buffering
 - **Raspberry Pi optimized** - Built specifically for Pi 3/4 hardware
@@ -14,7 +15,8 @@ A minimal Alpine Linux image for Raspberry Pi that runs [SendSpin](https://githu
 
 - Raspberry Pi 3 Model B / B+
 - Raspberry Pi 4 Model B
-- USB Audio DACs (USB Audio Class compliant devices)
+- Onboard 3.5mm headphone jack (default output)
+- USB Audio DACs (optional, USB Audio Class compliant devices)
 
 ## Quick Start
 
@@ -36,7 +38,7 @@ Use [Rufus](https://rufus.ie/)
 ### First Boot
 
 1. Insert SD card into Raspberry Pi
-2. Connect USB DAC
+2. (Optional) Connect a USB DAC if you don't want to use the onboard headphone jack
 3. Power on
 4. The player will automatically connect to Music Assistant on your network
 5. Default credentials: `root` / `alpine` (change immediately!)
@@ -88,10 +90,10 @@ rc-service hostname restart
 
 ### Audio Device
 
-By default, the system uses the first USB audio device (card 0). To use a different device:
+By default, the system uses the onboard 3.5mm headphone jack (ALSA card `Headphones`). To use a USB DAC or another device instead:
 
 1. List audio devices: `aplay -l`
-2. Edit `/etc/asound.conf` and change `card 0` to your device number
+2. Edit `/etc/asound.conf` and change `Headphones` to your device's card name or number
 3. Restart sendspin: `rc-service sendspin restart`
 
 ## Project Structure
