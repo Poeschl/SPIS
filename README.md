@@ -43,9 +43,19 @@ Use [Rufus](https://rufus.ie/)
 
 ## Building from Source
 
-### Automated Build (Coming Soon)
+### Automated Build (GitHub Actions)
 
-An automated build script is in development. For now, use the manual installation method.
+Every tagged push (`v*`) triggers `.github/workflows/build-image.yml`, which builds a ready-to-flash image on a native `ubuntu-24.04-arm` runner (no QEMU CPU emulation needed) and publishes it as a GitHub Release:
+
+- `sass-<version>-armv7.img.xz` - the flashable image, extract with `xz -d` then `dd`/Raspberry Pi Imager it onto an SD card
+- `sass-<version>-armv7-CREDENTIALS.txt` - the random root password generated for that build (you'll be forced to change it on first login)
+- `version-info` - build version metadata
+
+To build locally on a Linux host (root required, needs `util-linux`, `dosfstools`, `e2fsprogs`, `zerofree`, `xz-utils`):
+
+```bash
+sudo ./build.sh
+```
 
 ### Manual Installation
 
@@ -87,15 +97,26 @@ By default, the system uses the first USB audio device (card 0). To use a differ
 ## Project Structure
 
 ```
-sendspin-alpine-image/
-├── build.sh              # Main build script
+SASS/
+├── build.sh                    # Main build script (creates the SD card image)
+├── .github/workflows/
+│   └── build-image.yml         # CI: builds + releases the image on tag push
 ├── config/
-│   ├── asound.conf      # ALSA audio configuration
-│   ├── sendspin.initd   # OpenRC service script
-│   └── packages.txt     # List of packages to install
-├── scripts/
-│   └── setup.sh         # Post-install configuration
-└── output/              # Build artifacts
+│   ├── packages.txt            # Top-level list of packages to install
+│   ├── build-deps.txt          # Build-only packages removed in slim builds
+│   └── setup-chroot.sh         # Non-interactive install, run inside the chroot
+├── card_skeleton/               # Mirrors the target rootfs 1:1, rsync'd onto
+│   │                            # the image as-is (paths below == final paths)
+│   ├── etc/
+│   │   ├── apk/repositories     # branch placeholder substituted at build time
+│   │   ├── network/interfaces   # DHCP on eth0
+│   │   ├── init.d/sendspin      # OpenRC service script
+│   │   ├── asound.conf          # ALSA audio configuration
+│   │   └── fstab                #
+│   └── boot/
+│       ├── config.txt           # Raspberry Pi boot config
+│       └── cmdline.txt          #
+└── dist/                       # Build artifacts (.img.xz, credentials)
 ```
 
 ## Troubleshooting

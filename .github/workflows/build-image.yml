@@ -1,0 +1,54 @@
+name: Build SASS image
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # Native arm64 runner: avoids QEMU CPU emulation entirely for the chroot
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need tags for the version
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -yqq \
+            util-linux dosfstools e2fsprogs zerofree \
+            qemu-user-static binfmt-support \
+            rsync curl tar xz-utils
+
+      - name: Build image
+        run: sudo ./build.sh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sass-image
+          path: |
+            dist/*.img.xz
+            dist/*-CREDENTIALS.txt
+            dist/version-info
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          append_body: true
+          body_path: dist/version-info
+          files: |
+            dist/*.img.xz
+            dist/*-CREDENTIALS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

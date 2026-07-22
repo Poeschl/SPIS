@@ -1,0 +1,23 @@
+# SASS - Simple Alpine SendSpin - boot config
+# Shared config for Raspberry Pi 3 and 4
+
+# Enable audio (onboard + required for USB audio class detection)
+dtparam=audio=on
+
+# Give the GPU minimal memory, headless audio appliance
+gpu_mem=16
+
+# Boot faster
+disable_splash=1
+boot_delay=0
+
+[pi3]
+kernel=boot/vmlinuz-rpi
+initramfs boot/initramfs-rpi
+
+[pi4]
+kernel=boot/vmlinuz-rpi
+initramfs boot/initramfs-rpi
+arm_boost=1
+
+[all]
