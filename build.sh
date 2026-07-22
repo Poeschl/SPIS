@@ -44,6 +44,7 @@ cleanup() {
         umount -fl "${ROOTFS}/proc" 2>/dev/null
         umount -fl "${ROOTFS}/sys" 2>/dev/null
         umount -fl "${ROOTFS}/dev" 2>/dev/null
+        umount -fl "${ROOTFS}/tmp" 2>/dev/null
         umount -fl "${ROOTFS}/boot" 2>/dev/null
         umount -fl "${ROOTFS}" 2>/dev/null
     fi
@@ -102,6 +103,11 @@ echo "==> Bootstrap minimal alpine root fs"
     --arch "${ALPINE_ARCH}" -U --allow-untrusted \
     --root "${ROOTFS}" --initdb add alpine-base
 
+echo "==> Map chroot /tmp for memory backed build space"
+mkdir -p "${ROOTFS}/tmp"
+# Use tmpfs for /tmp so pip has enough scratch space to build wheels from source
+mount -t tmpfs tmpfs "${ROOTFS}/tmp"
+
 echo "==> Mirror card_skeleton/ onto the rootfs"
 # No permissions are allowed here, since the boot partition doesn't support this
 rsync -a --no-owner --no-group "${SCRIPT_DIR}/card_skeleton/" "${ROOTFS}/"
@@ -109,10 +115,9 @@ rsync -a --no-owner --no-group "${SCRIPT_DIR}/card_skeleton/" "${ROOTFS}/"
 sed -i "s/__ALPINE_BRANCH__/${ALPINE_BRANCH}/g" "${ROOTFS}/etc/apk/repositories"
 chmod +x "${ROOTFS}/etc/init.d/sendspin"
 
-mkdir -p "${ROOTFS}/tmp"
 install -m 644 "${SCRIPT_DIR}/config/packages.txt" "${ROOTFS}/tmp/packages.txt"
 install -m 644 "${SCRIPT_DIR}/config/build-deps.txt" "${ROOTFS}/tmp/build-deps.txt"
-install -m 755 "${SCRIPT_DIR}/config/setup-chroot.sh" "${ROOTFS}/setup-chroot.sh"
+install -m 755 "${SCRIPT_DIR}/config/setup-chroot.sh" "${ROOTFS}/tmp/setup-chroot.sh"
 
 cat > "${ROOTFS}/build.env" <<EOF
 SASS_HOSTNAME="${SASS_HOSTNAME}"
@@ -135,13 +140,14 @@ mount --bind /dev "${ROOTFS}/dev"
 # Borrow the host's resolv.conf so DNS/apk work inside the chroot
 cp /etc/resolv.conf "${ROOTFS}/etc/resolv.conf"
 
-chroot "${ROOTFS}" /bin/sh /setup-chroot.sh
+chroot "${ROOTFS}" /bin/sh /tmp/setup-chroot.sh
 
 rm -f "${ROOTFS}/etc/resolv.conf"
 
 umount -fl "${ROOTFS}/proc"
 umount -fl "${ROOTFS}/sys"
 umount -fl "${ROOTFS}/dev"
+umount -fl "${ROOTFS}/tmp"
 
 echo "==> Retrieve credentials and cleanup"
 if [ -f "${ROOTFS}/CREDENTIALS.txt" ]; then
