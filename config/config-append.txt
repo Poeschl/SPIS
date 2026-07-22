@@ -1,5 +1,5 @@
 
-# --- SASS - Simple Appliance SendSpin System --- #
+# --- SPIS - Simple PI SendSpin --- #
 # Appended to the RaspiOS Lite base config.txt, kept additive so we don't
 # clobber the kernel/overlay settings the base image already ships with.
 

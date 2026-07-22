@@ -1,6 +1,6 @@
-# SASS
+# SPIS
 
-Simple Appliance SendSpin System
+Simple PI SendSpin
 
 A minimal Raspberry Pi OS Lite image for Raspberry Pi that runs [SendSpin](https://github.com/Sendspin/sendspin-cli) - a high-quality audio streaming protocol for Home Assistant's Music Assistant.
 
@@ -30,7 +30,7 @@ Download the latest image from [Releases](https://github.com/Poeschl/SAS/release
 
 **Linux/macOS:**
 ```bash
-dd if=sass-0.1.0-aarch64.img of=/dev/sdX bs=4M status=progress
+dd if=spis-0.1.0-aarch64.img of=/dev/sdX bs=4M status=progress
 sync
 ```
 
@@ -51,8 +51,8 @@ Use [Rufus](https://rufus.ie/)
 
 Every tagged push (`v*`) triggers `.github/workflows/build-image.yml`, which builds a ready-to-flash image and publishes it as a GitHub Release:
 
-- `sass-<version>-aarch64.img.xz` - the flashable image
-- `sass-<version>-aarch64-CREDENTIALS.txt` - the random root password generated for that build (you'll be forced to change it on first login)
+- `spis-<version>-aarch64.img.xz` - the flashable image
+- `spis-<version>-aarch64-CREDENTIALS.txt` - the random root password generated for that build (you'll be forced to change it on first login)
 - `version-info` - build version metadata
 
 ### Manual Installation
@@ -90,7 +90,7 @@ By default, the system uses the onboard 3.5mm headphone jack (ALSA card `Headpho
 ## Project Structure
 
 ```
-SASS/
+SPIS/
 ├── build.sh                    # Main build script (downloads + customizes the SD card image)
 ├── .github/workflows/
 │   └── build-image.yml         # CI: builds + releases the image on tag push

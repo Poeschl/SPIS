@@ -7,8 +7,8 @@
 set -euo pipefail
 
 . /build.env
-: "${SASS_HOSTNAME:=sendspin}"
-: "${SASS_VERSION:=dev}"
+: "${SPIS_HOSTNAME:=sendspin}"
+: "${SPIS_VERSION:=dev}"
 : "${SLIM_BUILD:=true}"
 
 export DEBIAN_FRONTEND=noninteractive
@@ -25,10 +25,10 @@ echo "====> Enable sendspin service"
 systemctl enable sendspin.service
 
 echo "====> Config hostname"
-echo "${SASS_HOSTNAME}" > /etc/hostname
+echo "${SPIS_HOSTNAME}" > /etc/hostname
 cat > /etc/hosts <<EOF
-127.0.0.1 localhost ${SASS_HOSTNAME}
-::1       localhost ${SASS_HOSTNAME}
+127.0.0.1 localhost ${SPIS_HOSTNAME}
+::1       localhost ${SPIS_HOSTNAME}
 EOF
 
 echo "====> Setup tzdata"
@@ -39,7 +39,7 @@ dpkg-reconfigure -f noninteractive tzdata >/dev/null 2>&1 || true
 echo "====> Enable ssh and allow root login"
 systemctl enable ssh
 mkdir -p /etc/ssh/sshd_config.d
-cat > /etc/ssh/sshd_config.d/10-sass-root-login.conf <<EOF
+cat > /etc/ssh/sshd_config.d/10-spis-root-login.conf <<EOF
 PermitRootLogin yes
 EOF
 
@@ -52,14 +52,14 @@ systemctl enable regenerate_ssh_host_keys.service >/dev/null 2>&1 || true
 
 echo "====> Generate initial root password"
 # must be changed on first login so it isn't left in place long-term
-SASS_ROOT_PASSWORD="$(head -c 18 /dev/urandom | base64 | tr -d '=+/' | cut -c1-16)"
-echo "root:${SASS_ROOT_PASSWORD}" | chpasswd
+SPIS_ROOT_PASSWORD="$(head -c 18 /dev/urandom | base64 | tr -d '=+/' | cut -c1-16)"
+echo "root:${SPIS_ROOT_PASSWORD}" | chpasswd
 passwd -u root >/dev/null 2>&1 || true
 chage -d 0 root >/dev/null 2>&1 || true
 {
-    echo "SASS ${SASS_VERSION} - initial credentials"
+    echo "SPIS ${SPIS_VERSION} - initial credentials"
     echo "user: root"
-    echo "password: ${SASS_ROOT_PASSWORD}"
+    echo "password: ${SPIS_ROOT_PASSWORD}"
     echo "You will be required to set a new password on first login (SSH or console)."
 } > /root/CREDENTIALS.txt
 chmod 600 /root/CREDENTIALS.txt
@@ -68,7 +68,7 @@ cp /root/CREDENTIALS.txt /CREDENTIALS.txt
 
 echo "====> Setup motd"
 cat > /etc/motd <<EOF
-SASS - Simple Appliance SendSpin System, version ${SASS_VERSION}
+SPIS - Simple PI SendSpin, version ${SPIS_VERSION}
 See /root/CREDENTIALS.txt for the initial root password.
 EOF
 

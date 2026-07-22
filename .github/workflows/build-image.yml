@@ -1,4 +1,4 @@
-name: Build SASS image
+name: Build SPIS image
 
 on:
   push:
@@ -40,7 +40,7 @@ jobs:
       - name: ⤴️ Upload build artifact
         uses: actions/upload-artifact@v7
         with:
-          name: sass-image
+          name: spis-image
           path: |
             dist/*.img.xz
             dist/*-CREDENTIALS.txt

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # build.sh
 #
-# Builds a flashable SASS SD card image for Raspberry Pi 3/4, fully
+# Builds a flashable SPIS SD card image for Raspberry Pi 3/4, fully
 # automated (no interactive raspi-config/Imager customization wizard).
 #
 # Starts from the official Raspberry Pi OS Lite (arm64) base image and
@@ -29,11 +29,11 @@ RASPIOS_ARCH="${RASPIOS_ARCH:-arm64}"
 RASPIOS_IMAGE_URL="${RASPIOS_IMAGE_URL:-https://downloads.raspberrypi.com/raspios_lite_${RASPIOS_ARCH}_latest}"
 
 IMG_SIZE="${IMG_SIZE:-4000M}"
-SASS_HOSTNAME="${SASS_HOSTNAME:-sendspin}"
+SPIS_HOSTNAME="${SPIS_HOSTNAME:-sendspin}"
 SLIM_BUILD="${SLIM_BUILD:-true}"
-SASS_VERSION="${SASS_VERSION:-$(git -C "${SCRIPT_DIR}" describe --abbrev=7 --dirty --always --tags 2>/dev/null || echo dev)}"
+SPIS_VERSION="${SPIS_VERSION:-$(git -C "${SCRIPT_DIR}" describe --abbrev=7 --dirty --always --tags 2>/dev/null || echo dev)}"
 
-OUTPUT_NAME="${1:-sass-${SASS_VERSION}-${RASPIOS_ARCH}}"
+OUTPUT_NAME="${1:-SPIS-${SPIS_VERSION}-${RASPIOS_ARCH}}"
 IMG_FILE="${WORK_DIR}/${OUTPUT_NAME}.img"
 
 HOST_ARCH="$(uname -m)"
@@ -58,7 +58,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "==> Building SASS ${SASS_VERSION} (${RASPIOS_ARCH}) on host ${HOST_ARCH}"
+echo "==> Building SPIS ${SPIS_VERSION} (${RASPIOS_ARCH}) on host ${HOST_ARCH}"
 
 rm -rf "${WORK_DIR}"
 mkdir -p "${WORK_DIR}" "${DIST_DIR}" "${ROOTFS}"
@@ -109,8 +109,8 @@ install -m 644 "${SCRIPT_DIR}/config/build-deps.txt" "${ROOTFS}/tmp/build-deps.t
 install -m 755 "${SCRIPT_DIR}/config/setup-chroot.sh" "${ROOTFS}/tmp/setup-chroot.sh"
 
 cat > "${ROOTFS}/build.env" <<EOF
-SASS_HOSTNAME="${SASS_HOSTNAME}"
-SASS_VERSION="${SASS_VERSION}"
+SPIS_HOSTNAME="${SPIS_HOSTNAME}"
+SPIS_VERSION="${SPIS_VERSION}"
 SLIM_BUILD="${SLIM_BUILD}"
 EOF
 
@@ -143,7 +143,7 @@ fi
 echo "==> Append audio/boot tuning to config.txt"
 cat "${SCRIPT_DIR}/config/config-append.txt" >> "${BOOT_MOUNT}/config.txt"
 
-echo "SASS version: ${SASS_VERSION}" > "${ROOTFS}/version-info"
+echo "SPIS version: ${SPIS_VERSION}" > "${ROOTFS}/version-info"
 cp "${ROOTFS}/version-info" "${DIST_DIR}/version-info"
 
 echo "==> Shrink the image"
