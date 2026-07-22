@@ -66,12 +66,6 @@ chmod 600 /root/CREDENTIALS.txt
 # build.sh pulls this out to publish alongside the release artifact
 cp /root/CREDENTIALS.txt /CREDENTIALS.txt
 
-echo "====> Setup motd"
-cat > /etc/motd <<EOF
-SPIS - Simple PI SendSpin, version ${SPIS_VERSION}
-See /root/CREDENTIALS.txt for the initial root password.
-EOF
-
 echo "====> Cleanup"
 # Remove build-deps.txt packages
 if [ "${SLIM_BUILD}" = "true" ]; then

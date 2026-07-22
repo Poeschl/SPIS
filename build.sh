@@ -72,7 +72,7 @@ echo "==> Grow image to ${IMG_SIZE} and expand the root partition"
 truncate -s "${IMG_SIZE}" "${IMG_FILE}"
 
 LOOP_DEV="$(losetup -fP --show "${IMG_FILE}")"
-echo "==> Attached ${IMG_FILE} as ${LOOP_DEV}"
+echo "Attached ${IMG_FILE} as ${LOOP_DEV}"
 
 # Base image's root partition (p2) only fills its own (much smaller) image;
 # grow it to claim the space added above.

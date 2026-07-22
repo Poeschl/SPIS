@@ -73,6 +73,26 @@ This method is recommended if you want to:
 
 **WiFi:** SSH into the device and configure via `nmtui` or `nmcli` (NetworkManager, shipped with Raspberry Pi OS)
 
+### Enabling WiFi
+
+1. SSH into the device (via Ethernet, or a monitor/keyboard connected directly)
+2. Set the WiFi country (required before the radio can be used, see [Troubleshooting](#wi-fi-blocked-by-rfkill) below):
+   ```bash
+   sudo raspi-config
+   ```
+   Navigate to `5 Localisation Options` → `L4 WLAN Country` and select your country.
+3. Connect to a network using `nmtui` (interactive) or `nmcli`:
+   ```bash
+   sudo nmtui
+   # or non-interactively:
+   sudo nmcli device wifi connect "SSID" password "your-password"
+   ```
+4. Verify the connection:
+   ```bash
+   nmcli device status
+   ip a
+   ```
+
 ### Hostname
 
 ```bash

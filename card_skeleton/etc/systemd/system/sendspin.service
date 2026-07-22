@@ -1,12 +1,17 @@
 [Unit]
 Description=SendSpin Audio Player
 Documentation=https://github.com/Sendspin/sendspin-cli
-After=network-online.target sound.target
-Wants=network-online.target
+After=network-online.target sound.target systemd-udev-settle.service
+Wants=network-online.target systemd-udev-settle.service
 
 [Service]
 Type=simple
 User=root
+# sound.target is reached as soon as the sound subsystem is present, not once
+# a card has actually enumerated (onboard audio and USB DACs can lag a bit at
+# boot), so PortAudio's ALSA host API can fail to initialize if we start too
+# early. Wait for at least one ALSA card to show up before starting.
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do [ -s /proc/asound/cards ] && exit 0; sleep 1; done; echo "No ALSA card detected after 30s, starting anyway" >&2; exit 0'
 ExecStart=/usr/local/bin/sendspin --headless
 Restart=on-failure
 RestartSec=5
