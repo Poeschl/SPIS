@@ -110,9 +110,6 @@ sudo nano /etc/asound.conf
 Add this content (adjust card number/name if needed):
 
 ```
-defaults.pcm.card 0
-defaults.ctl.card 0
-
 pcm.!default {
     type plug
     slave.pcm "hw:0,0"
@@ -124,7 +121,7 @@ ctl.!default {
 }
 ```
 
-**Important:** Change `card 0` to match your USB DAC number from `aplay -l`. By default
+**Important:** Change `0` to match your USB DAC number/name from `aplay -l`. By default
 (no `/etc/asound.conf`) the onboard 3.5mm jack (card `Headphones`) is used.
 
 ### Test Audio
