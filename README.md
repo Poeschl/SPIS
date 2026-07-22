@@ -1,4 +1,6 @@
-# SASS - Simple Alpine SendSpin - Raspberry Pi Audio Streaming Player
+# SASS
+
+Simple Alpine SendSpin
 
 A minimal Alpine Linux image for Raspberry Pi that runs [SendSpin](https://github.com/Sendspin/sendspin-cli) - a high-quality audio streaming protocol for Home Assistant's Music Assistant.
 
@@ -22,13 +24,13 @@ A minimal Alpine Linux image for Raspberry Pi that runs [SendSpin](https://githu
 
 ### Download Pre-built Image
 
-Download the latest image from [Releases](https://github.com/yourusername/sendspin-alpine-image/releases)
+Download the latest image from [Releases](https://github.com/Poeschl/SAS/releases)
 
 ### Flash to SD Card
 
 **Linux/macOS:**
 ```bash
-dd if=sendspin-alpine-0.1.0-armv7.img of=/dev/sdX bs=4M status=progress
+dd if=sass-0.1.0-armv7.img of=/dev/sdX bs=4M status=progress
 sync
 ```
 
@@ -47,17 +49,11 @@ Use [Rufus](https://rufus.ie/)
 
 ### Automated Build (GitHub Actions)
 
-Every tagged push (`v*`) triggers `.github/workflows/build-image.yml`, which builds a ready-to-flash image on a native `ubuntu-24.04-arm` runner (no QEMU CPU emulation needed) and publishes it as a GitHub Release:
+Every tagged push (`v*`) triggers `.github/workflows/build-image.yml`, which builds a ready-to-flash image and publishes it as a GitHub Release:
 
-- `sass-<version>-armv7.img.xz` - the flashable image, extract with `xz -d` then `dd`/Raspberry Pi Imager it onto an SD card
+- `sass-<version>-armv7.img.xz` - the flashable image
 - `sass-<version>-armv7-CREDENTIALS.txt` - the random root password generated for that build (you'll be forced to change it on first login)
 - `version-info` - build version metadata
-
-To build locally on a Linux host (root required, needs `util-linux`, `dosfstools`, `e2fsprogs`, `zerofree`, `xz-utils`):
-
-```bash
-sudo ./build.sh
-```
 
 ### Manual Installation
 
@@ -156,24 +152,9 @@ aplay -l
 dmesg | grep -i audio
 ```
 
-## Roadmap
-
-- [ ] Web UI for configuration
-- [ ] Audio input capture and streaming
-- [ ] WiFi configuration via boot partition config file
-- [ ] Multiple USB DAC support
-- [ ] Automatic updates
-
-## Contributing
-
-Contributions welcome! Please open an issue or pull request.
-
-## License
-
-MIT License - See LICENSE file for details
-
 ## Credits
 
+- [Tycho-MEC/SASS](https://github.com/Tycho-MEC/SASS) for the base of this fork
 - [SendSpin](https://github.com/Sendspin/sendspin-cli) by the SendSpin team
 - [Alpine Linux](https://alpinelinux.org/) 
 - [Home Assistant](https://www.home-assistant.io/) and [Music Assistant](https://music-assistant.io/)
