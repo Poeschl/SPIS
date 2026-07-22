@@ -22,7 +22,7 @@ WORK_DIR="${SCRIPT_DIR}/work"
 DIST_DIR="${SCRIPT_DIR}/dist"
 ROOTFS="${WORK_DIR}/root"
 
-ALPINE_BRANCH="${ALPINE_BRANCH:-3.21}"
+ALPINE_BRANCH="${ALPINE_BRANCH:-3.24}"
 ALPINE_ARCH="${ALPINE_ARCH:-armv7}"
 MIRROR="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_BRANCH}"
 
