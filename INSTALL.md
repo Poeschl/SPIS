@@ -1,6 +1,6 @@
-# SendSpin Alpine - Manual Installation Guide
+# SendSpin RaspiOS - Manual Installation Guide
 
-This guide walks you through installing SendSpin on Alpine Linux from scratch. This is useful for:
+This guide walks you through installing SendSpin on Raspberry Pi OS Lite from scratch. This is useful for:
 - Building your own custom image
 - Understanding how the system works
 - Troubleshooting issues
@@ -10,48 +10,28 @@ This guide walks you through installing SendSpin on Alpine Linux from scratch. T
 
 - Raspberry Pi 3 or 4
 - MicroSD card (8GB minimum, 16GB recommended)
-- USB Audio DAC
+- USB Audio DAC (optional, onboard headphone jack works out of the box)
 - Network connection (Ethernet recommended)
 - Another computer to prepare the SD card
 
-## Step 1: Download Alpine Linux
+## Step 1: Download Raspberry Pi OS Lite
 
-1. Visit https://alpinelinux.org/downloads/
-2. Download the **armv7** version for Raspberry Pi: `alpine-rpi-{version}-armv7.tar.gz`
-3. For Raspberry Pi 3, use armv7 (recommended) or armhf
+1. Visit https://www.raspberrypi.com/software/operating-systems/
+2. Download **Raspberry Pi OS Lite (64-bit)** (`raspios_lite_arm64`)
+3. Or use [Raspberry Pi Imager](https://www.raspberrypi.com/software/) to flash it directly to the SD card
 
-## Step 2: Prepare SD Card
+## Step 2: Flash the Image
 
-### Format SD Card
+**Using Raspberry Pi Imager (recommended, all platforms):**
+1. Select "Raspberry Pi OS Lite (64-bit)" as the OS
+2. Select your SD card
+3. In the settings (gear icon), enable SSH and set a username/password if you want first-boot access already configured
+4. Write the image
 
-**Linux:**
+**Using dd (Linux/macOS), after extracting the downloaded `.img.xz`:**
 ```bash
-# Find your SD card device (e.g., /dev/sdb)
-lsblk
-
-# Format as FAT32
-sudo mkfs.vfat -F 32 /dev/sdX1
-```
-
-**Windows:**
-- Use SD Card Formatter tool
-- Format as FAT32
-
-**macOS:**
-- Use Disk Utility
-- Format as MS-DOS (FAT)
-
-### Extract Alpine to SD Card
-
-```bash
-# Extract the outer tar.gz
-tar -xzf alpine-rpi-3.21.0-armv7.tar.gz
-
-# You'll get another .tar file - extract that too
-tar -xf alpine-rpi-3.21.0-armv7.tar
-
-# Copy the contents (not the tar file itself) to SD card root
-# The SD card should contain folders like: boot/, apks/, config.txt, etc.
+dd if=raspios-lite.img of=/dev/sdX bs=4M status=progress
+sync
 ```
 
 ## Step 3: First Boot and Basic Setup
@@ -60,57 +40,23 @@ tar -xf alpine-rpi-3.21.0-armv7.tar
 2. Connect Ethernet cable
 3. Power on and wait ~30 seconds
 4. Find the Pi's IP address (check your router or use `nmap`)
-5. SSH into the Pi:
+5. SSH into the Pi with the user configured in Imager (or `pi`, if you used that flow)
 
 ```bash
-ssh root@<pi-ip-address>
-# Default password: (none, just press Enter)
+ssh <user>@<pi-ip-address>
 ```
 
-### Run Alpine Setup
+## Step 4: Update the System
 
 ```bash
-setup-alpine
-```
-
-Answer the prompts:
-- **Keyboard layout:** us (or your preference)
-- **Hostname:** sendspin (or your choice)
-- **Network:** Use DHCP for eth0
-- **Root password:** Set a secure password
-- **Timezone:** Your timezone (e.g., America/New_York)
-- **Proxy:** none
-- **NTP client:** chrony
-- **APK mirror:** Choose fastest (usually default)
-- **SSH server:** openssh
-- **Disk:** Choose your SD card (mmcblk0)
-- **Mode:** sys (full installation to disk)
-
-The system will install and reboot.
-
-## Step 4: Enable Community Repository
-
-After reboot, SSH back in and edit repositories:
-
-```bash
-vi /etc/apk/repositories
-```
-
-Uncomment the `community` line (remove the `#`):
-```
-http://dl-cdn.alpinelinux.org/alpine/v3.21/main
-http://dl-cdn.alpinelinux.org/alpine/v3.21/community
-```
-
-Update package index:
-```bash
-apk update
+sudo apt-get update
+sudo apt-get upgrade -y
 ```
 
 ## Step 5: Install System Dependencies
 
 ```bash
-apk add python3 py3-pip alsa-utils alsa-lib
+sudo apt-get install -y python3 python3-pip python3-venv alsa-utils libasound2
 ```
 
 ## Step 6: Install Build Dependencies
@@ -118,31 +64,32 @@ apk add python3 py3-pip alsa-utils alsa-lib
 These are needed to compile Python packages:
 
 ```bash
-apk add gcc musl-dev python3-dev build-base linux-headers \
-    openblas-dev gfortran ffmpeg-dev pkgconfig libffi-dev \
-    jpeg-dev zlib-dev portaudio-dev portaudio
+sudo apt-get install -y gcc python3-dev build-essential libopenblas-dev gfortran \
+    libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev \
+    libswresample-dev pkg-config libffi-dev libjpeg-dev zlib1g-dev \
+    portaudio19-dev libportaudio2
 ```
 
 ## Step 7: Install SendSpin
 
 ```bash
-pip install sendspin --break-system-packages
+sudo pip install --break-system-packages sendspin
 ```
 
 This will take 10-20 minutes on a Raspberry Pi 3 as it compiles numpy and other packages.
 
-**Note:** The `--break-system-packages` flag is needed on Alpine. This is safe for a dedicated appliance.
+**Note:** The `--break-system-packages` flag is needed because Debian/RaspiOS marks the
+system Python as externally managed (PEP 668). This is safe for a dedicated appliance.
 
 ## Step 8: Add SendSpin to PATH
 
-If installing as a non-root user:
+If installing as root (as above), sendspin is installed to `/usr/local/bin` and is
+already on `PATH`. If installing as a non-root user instead:
 
 ```bash
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
 source ~/.profile
 ```
-
-For system-wide installation, install as root and it will be in `/usr/local/bin`.
 
 ## Step 9: Configure USB Audio
 
@@ -157,15 +104,12 @@ You should see your USB device listed as card 0 or card 1.
 ### Create ALSA Configuration
 
 ```bash
-vi /etc/asound.conf
+sudo nano /etc/asound.conf
 ```
 
-Add this content (adjust card number if needed):
+Add this content (adjust card number/name if needed):
 
 ```
-defaults.pcm.card 0
-defaults.ctl.card 0
-
 pcm.!default {
     type plug
     slave.pcm "hw:0,0"
@@ -177,7 +121,8 @@ ctl.!default {
 }
 ```
 
-**Important:** Change `card 0` to match your USB DAC number from `aplay -l`.
+**Important:** Change `0` to match your USB DAC number/name from `aplay -l`. By default
+(no `/etc/asound.conf`) the onboard 3.5mm jack (card `Headphones`) is used.
 
 ### Test Audio
 
@@ -189,87 +134,78 @@ You should hear pink noise. Press Ctrl+C to stop.
 
 ## Step 10: Create SendSpin Service
 
-Create the OpenRC service script:
+Create the systemd unit:
 
 ```bash
-vi /etc/init.d/sendspin
+sudo nano /etc/systemd/system/sendspin.service
 ```
 
 Add this content:
 
-```bash
-#!/sbin/openrc-run
+```ini
+[Unit]
+Description=SendSpin Audio Player
+Documentation=https://github.com/Sendspin/sendspin-cli
+After=network-online.target sound.target
+Wants=network-online.target
 
-name="SendSpin Audio Player"
-description="SendSpin streaming audio player for Home Assistant"
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/sendspin --headless
+Restart=on-failure
+RestartSec=5
 
-command="/usr/local/bin/sendspin"
-command_args="--headless"
-command_user="root"
-command_background=true
-pidfile="/run/${RC_SVCNAME}.pid"
-
-depend() {
-    need net
-    after firewall
-}
-
-start_pre() {
-    checkpath --directory --owner $command_user --mode 0755 /run
-}
+[Install]
+WantedBy=multi-user.target
 ```
 
-**Note:** If you installed as a user, change the command path to `/home/username/.local/bin/sendspin` and adjust `command_user`.
-
-Make it executable:
-
-```bash
-chmod +x /etc/init.d/sendspin
-```
+**Note:** If you installed as a non-root user, change `User=` and the `ExecStart` path
+to `/home/username/.local/bin/sendspin`.
 
 Enable and start the service:
 
 ```bash
-rc-update add sendspin default
-rc-service sendspin start
+sudo systemctl daemon-reload
+sudo systemctl enable --now sendspin
 ```
 
 Check status:
 
 ```bash
-rc-service sendspin status
+systemctl status sendspin
 ```
 
-## Step 11: Optional - Install sudo/doas
+## Step 11: Optional - Configure doas as a sudo alternative
 
 For easier administration:
 
 ```bash
-apk add doas
+sudo apt-get install -y doas
 
 # Configure doas
-echo "permit persist :wheel" > /etc/doas.d/doas.conf
+echo "permit persist :sudo" | sudo tee /etc/doas.conf
 
 # Add a user (if desired)
-adduser yourname
-addgroup yourname wheel
+sudo adduser yourname
+sudo usermod -aG sudo yourname
 ```
 
 ## Step 12: Test SendSpin
 
-SendSpin should now be running and visible to Music Assistant on your network. 
+SendSpin should now be running and visible to Music Assistant on your network.
 
 Check logs:
 ```bash
-cat /var/log/messages | grep sendspin
+journalctl -u sendspin -e
 ```
 
 Manual test (stop service first):
 ```bash
-rc-service sendspin stop
+sudo systemctl stop sendspin
 sendspin --headless
 # Press Ctrl+C to stop
-rc-service sendspin start
+sudo systemctl start sendspin
 ```
 
 ## Step 13: Cleanup (Optional)
@@ -277,9 +213,11 @@ rc-service sendspin start
 If you want to reduce image size, you can remove build dependencies after sendspin is installed:
 
 ```bash
-apk del gcc musl-dev python3-dev build-base linux-headers \
-    openblas-dev gfortran ffmpeg-dev pkgconfig libffi-dev \
-    jpeg-dev zlib-dev portaudio-dev
+sudo apt-get purge -y gcc python3-dev build-essential libopenblas-dev gfortran \
+    libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev \
+    libswresample-dev pkg-config libffi-dev libjpeg-dev zlib1g-dev portaudio19-dev
+sudo apt-get autoremove -y
+sudo apt-get clean
 ```
 
 **Warning:** Don't do this if you plan to install more Python packages later!
@@ -313,7 +251,8 @@ pcm.!default {
 
 ### Out of space during pip install
 
-You might be in diskless mode. Rerun `setup-alpine` and choose `sys` mode for disk installation.
+Make sure `/tmp` isn't a small tmpfs and the root partition has enough free space
+(`df -h /`); pip needs scratch space to build wheels like numpy from source.
 
 ### USB DAC not detected
 
@@ -324,14 +263,14 @@ You might be in diskless mode. Rerun `setup-alpine` and choose `sys` mode for di
 
 ### Service won't start
 
-- Check logs: `cat /var/log/messages`
+- Check logs: `journalctl -u sendspin -e`
 - Test manually: `sendspin --headless`
-- Verify permissions on init script: `ls -la /etc/init.d/sendspin`
+- Verify the unit file: `systemctl cat sendspin`
 
 ## Next Steps
 
 Once you have a working system:
 1. Test thoroughly with your USB DAC
-2. Configure WiFi if needed: `setup-interfaces`
+2. Configure WiFi if needed: `sudo nmtui`
 3. Change default passwords
 4. Consider creating an image backup of your SD card

@@ -1,0 +1,23 @@
+{
+  "name": null,
+  "log_level": null,
+  "listen_port": null,
+  "player_volume": 100,
+  "player_muted": false,
+  "static_delay_ms": 0.0,
+  "last_server_url": null,
+  "client_id": null,
+  "audio_device": null,
+  "use_mpris": true,
+  "audio_format": null,
+  "use_hardware_volume": null,
+  "hook_set_volume": null,
+  "hook_start": null,
+  "hook_stop": null,
+  "visualizer": false,
+  "manufacturer": null,
+  "product_name": "Simple PI SendSpin",
+  "last_played_server_id": null,
+  "interface": null,
+  "color_mode": null
+}

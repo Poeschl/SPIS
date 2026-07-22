@@ -1,0 +1,19 @@
+[Unit]
+Description=SendSpin Audio Player
+Documentation=https://github.com/Sendspin/sendspin-cli
+After=network-online.target sound.target systemd-udev-settle.service
+Wants=network-online.target systemd-udev-settle.service
+
+[Service]
+Type=simple
+User=root
+# Wait for at least one ALSA card to show up before starting.
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do [ -s /proc/asound/cards ] && exit 0; sleep 1; done; echo "No ALSA card detected after 30s, starting anyway" >&2; exit 0'
+# Fix every ALSA mixer control (Master/PCM/Headphone/etc, on every detected card) to 100% and unmuted
+ExecStartPre=/usr/local/sbin/set-audio-volume.sh
+ExecStart=/usr/local/bin/sendspin --headless
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
