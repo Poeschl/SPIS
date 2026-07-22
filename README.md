@@ -156,5 +156,5 @@ dmesg | grep -i audio
 
 - [Tycho-MEC/SASS](https://github.com/Tycho-MEC/SASS) for the base of this fork
 - [SendSpin](https://github.com/Sendspin/sendspin-cli) by the SendSpin team
-- [Alpine Linux](https://alpinelinux.org/) 
+- [Alpine Linux](https://alpinelinux.org/)
 - [Home Assistant](https://www.home-assistant.io/) and [Music Assistant](https://music-assistant.io/)

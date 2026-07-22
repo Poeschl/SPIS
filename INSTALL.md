@@ -257,7 +257,7 @@ addgroup yourname wheel
 
 ## Step 12: Test SendSpin
 
-SendSpin should now be running and visible to Music Assistant on your network. 
+SendSpin should now be running and visible to Music Assistant on your network.
 
 Check logs:
 ```bash
