@@ -1,31 +1,30 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # config/setup-chroot.sh
 #
-# Runs inside the target rootfs via `chroot`. Kept separate from the
-# interactive `setup-alpine` wizard so the whole install is reproducible.
+# Runs inside the target rootfs via `chroot`. Kept separate so the whole
+# install is reproducible without any interactive raspi-config/Imager step.
 
-set -eu
+set -euo pipefail
 
 . /build.env
 : "${SASS_HOSTNAME:=sendspin}"
 : "${SASS_VERSION:=dev}"
 : "${SLIM_BUILD:=true}"
 
-echo "====> Install packages"
-apk update
+export DEBIAN_FRONTEND=noninteractive
 
+echo "====> Install packages"
+apt-get update
 # shellcheck disable=SC2046
-apk add --no-cache $(grep -vE '^\s*#|^\s*$' /tmp/packages.txt)
+apt-get install -y --no-install-recommends $(grep -vE '^\s*#|^\s*$' /tmp/packages.txt)
 
 echo "====> Install sendspin"
-pip install --no-cache-dir sendspin --break-system-packages
+pip install --no-cache-dir --break-system-packages sendspin
 
-chmod +x /etc/init.d/sendspin
+echo "====> Enable sendspin service"
+systemctl enable sendspin.service
 
-echo "====> Config doas and hostname"
-mkdir -p /etc/doas.d
-echo "permit persist :wheel" > /etc/doas.d/doas.conf
-
+echo "====> Config hostname"
 echo "${SASS_HOSTNAME}" > /etc/hostname
 cat > /etc/hosts <<EOF
 127.0.0.1 localhost ${SASS_HOSTNAME}
@@ -33,52 +32,30 @@ cat > /etc/hosts <<EOF
 EOF
 
 echo "====> Setup tzdata"
-# tzdata is only needed transiently to seed /etc/localtime, drop it again
-apk add --no-cache tzdata
-cp "/usr/share/zoneinfo/UTC" /etc/localtime
+ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 echo "UTC" > /etc/timezone
-apk del tzdata
+dpkg-reconfigure -f noninteractive tzdata >/dev/null 2>&1 || true
 
-echo "====> Setup alpine system (non-interactive setup-alpine)"
-# setup-alpine normally wires these up interactively; do it explicitly since
-# nothing else will enable the services on first boot
-rc-update add mdev sysinit
-rc-update add devfs sysinit
-rc-update add dmesg sysinit
-rc-update add hwdrivers sysinit || true
-rc-update add modules boot
-rc-update add sysctl boot
-rc-update add hostname boot
-rc-update add bootmisc boot
-rc-update add syslog boot
-rc-update add hwclock boot
-rc-update add swap boot
-rc-update add networking default
-rc-update add sshd default
-rc-update add chronyd default
-rc-update add sendspin default
-rc-update add local default
-rc-update add mount-ro shutdown
-rc-update add killprocs shutdown
-rc-update add savecache shutdown
-
-echo "====> Generate ssh host keys"
-rm -f /etc/ssh/ssh_host_*
-mkdir -p /etc/local.d
-cat > /etc/local.d/00-sshkeys.start <<'EOF'
-#!/bin/sh
-if [ ! -e /etc/ssh/ssh_host_rsa_key ]; then
-    ssh-keygen -A
-    rc-service sshd restart >/dev/null 2>&1 || true
-fi
+echo "====> Enable ssh and allow root login"
+systemctl enable ssh
+mkdir -p /etc/ssh/sshd_config.d
+cat > /etc/ssh/sshd_config.d/10-sass-root-login.conf <<EOF
+PermitRootLogin yes
 EOF
-chmod +x /etc/local.d/00-sshkeys.start
+
+echo "====> Regenerate ssh host keys on first boot"
+# Remove the keys baked into the base image; raspberrypi-sys-mods'
+# regenerate_ssh_host_keys.service (if present) or a manual ssh-keygen -A on
+# first boot recreates them so every card gets unique host keys.
+rm -f /etc/ssh/ssh_host_*
+systemctl enable regenerate_ssh_host_keys.service >/dev/null 2>&1 || true
 
 echo "====> Generate initial root password"
 # must be changed on first login so it isn't left in place long-term
 SASS_ROOT_PASSWORD="$(head -c 18 /dev/urandom | base64 | tr -d '=+/' | cut -c1-16)"
 echo "root:${SASS_ROOT_PASSWORD}" | chpasswd
-passwd -e root >/dev/null 2>&1 || true
+passwd -u root >/dev/null 2>&1 || true
+chage -d 0 root >/dev/null 2>&1 || true
 {
     echo "SASS ${SASS_VERSION} - initial credentials"
     echo "user: root"
@@ -91,7 +68,7 @@ cp /root/CREDENTIALS.txt /CREDENTIALS.txt
 
 echo "====> Setup motd"
 cat > /etc/motd <<EOF
-SASS - Simple Alpine SendSpin, version ${SASS_VERSION}
+SASS - Simple Appliance SendSpin System, version ${SASS_VERSION}
 See /root/CREDENTIALS.txt for the initial root password.
 EOF
 
@@ -99,10 +76,12 @@ echo "====> Cleanup"
 # Remove build-deps.txt packages
 if [ "${SLIM_BUILD}" = "true" ]; then
     # shellcheck disable=SC2046
-    apk del $(grep -vE '^\s*#|^\s*$' /tmp/build-deps.txt) || true
+    apt-get purge -y $(grep -vE '^\s*#|^\s*$' /tmp/build-deps.txt) || true
+    apt-get autoremove -y || true
 fi
 
 # Don't leave build-only state behind in the shipped image
-rm -rf /var/cache/apk/*
+apt-get clean
+rm -rf /var/lib/apt/lists/*
 rm -f /tmp/packages.txt /tmp/build-deps.txt /build.env
 rm -f /build.sh

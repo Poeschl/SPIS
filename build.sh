@@ -2,10 +2,13 @@
 # build.sh
 #
 # Builds a flashable SASS SD card image for Raspberry Pi 3/4, fully
-# automated (no interactive setup-alpine wizard).
+# automated (no interactive raspi-config/Imager customization wizard).
 #
-# Requires root + sfdisk/losetup, mkfs.vfat, mkfs.ext4/e2fsck, zerofree,
-# rsync, curl, tar, xz.
+# Starts from the official Raspberry Pi OS Lite (arm64) base image and
+# customizes it via chroot.
+#
+# Requires root + losetup, parted, e2fsprogs (resize2fs/e2fsck), zerofree,
+# rsync, curl, xz.
 #
 # Usage: sudo ./build.sh [output-name-without-extension]
 
@@ -22,21 +25,20 @@ WORK_DIR="${SCRIPT_DIR}/work"
 DIST_DIR="${SCRIPT_DIR}/dist"
 ROOTFS="${WORK_DIR}/root"
 
-ALPINE_BRANCH="${ALPINE_BRANCH:-3.24}"
-ALPINE_ARCH="${ALPINE_ARCH:-aarch64}"
-MIRROR="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_BRANCH}"
+RASPIOS_ARCH="${RASPIOS_ARCH:-arm64}"
+RASPIOS_IMAGE_URL="${RASPIOS_IMAGE_URL:-https://downloads.raspberrypi.com/raspios_lite_${RASPIOS_ARCH}_latest}"
 
-IMG_SIZE="${IMG_SIZE:-3000M}"
+IMG_SIZE="${IMG_SIZE:-4000M}"
 SASS_HOSTNAME="${SASS_HOSTNAME:-sendspin}"
 SLIM_BUILD="${SLIM_BUILD:-true}"
 SASS_VERSION="${SASS_VERSION:-$(git -C "${SCRIPT_DIR}" describe --abbrev=7 --dirty --always --tags 2>/dev/null || echo dev)}"
-DISK_ID="${DISK_ID:-0x53415353}" # "SASS" in ASCII hex; must match PARTUUID=53415353-0N in card_skeleton
 
-OUTPUT_NAME="${1:-sass-${SASS_VERSION}-${ALPINE_ARCH}}"
+OUTPUT_NAME="${1:-sass-${SASS_VERSION}-${RASPIOS_ARCH}}"
 IMG_FILE="${WORK_DIR}/${OUTPUT_NAME}.img"
 
 HOST_ARCH="$(uname -m)"
 LOOP_DEV=""
+BOOT_MOUNT=""
 
 cleanup() {
     set +e
@@ -45,7 +47,9 @@ cleanup() {
         umount -fl "${ROOTFS}/sys" 2>/dev/null
         umount -fl "${ROOTFS}/dev" 2>/dev/null
         umount -fl "${ROOTFS}/tmp" 2>/dev/null
-        umount -fl "${ROOTFS}/boot" 2>/dev/null
+        if [ -n "${BOOT_MOUNT}" ]; then
+            umount -fl "${BOOT_MOUNT}" 2>/dev/null
+        fi
         umount -fl "${ROOTFS}" 2>/dev/null
     fi
     if [ -n "${LOOP_DEV}" ]; then
@@ -54,54 +58,42 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "==> Building SASS ${SASS_VERSION} (${ALPINE_ARCH}) on host ${HOST_ARCH}"
+echo "==> Building SASS ${SASS_VERSION} (${RASPIOS_ARCH}) on host ${HOST_ARCH}"
 
 rm -rf "${WORK_DIR}"
 mkdir -p "${WORK_DIR}" "${DIST_DIR}" "${ROOTFS}"
 
-# Fetch a static apk binary for the host arch to bootstrap the target rootfs
-APK_STATIC="${WORK_DIR}/apk.static"
-APK_PKG_NAME="$(curl -fsSL "${MIRROR}/main/${HOST_ARCH}/" \
-    | grep -oE 'apk-tools-static-[0-9][^"]*\.apk' | sort -V | tail -n1)"
-if [ -z "${APK_PKG_NAME}" ]; then
-    echo "Could not determine apk-tools-static package name for ${HOST_ARCH}" >&2
-    exit 1
-fi
-curl -fsSL -o "${WORK_DIR}/apk-tools-static.apk" "${MIRROR}/main/${HOST_ARCH}/${APK_PKG_NAME}"
-# .apk files are gzip tarballs; extract the static apk binary
-tar -xz -f "${WORK_DIR}/apk-tools-static.apk" -C "${WORK_DIR}" sbin/apk.static
-mv "${WORK_DIR}/sbin/apk.static" "${APK_STATIC}"
-chmod +x "${APK_STATIC}"
+echo "==> Download Raspberry Pi OS Lite base image"
+curl -fsSL -o "${WORK_DIR}/base.img.xz" "${RASPIOS_IMAGE_URL}"
+xz -T0 -d -c "${WORK_DIR}/base.img.xz" > "${IMG_FILE}"
+rm -f "${WORK_DIR}/base.img.xz"
 
-echo "==> Create partitions"
-# Create + partition the disk image (p1 = FAT32 boot, p2 = ext4 root)
+echo "==> Grow image to ${IMG_SIZE} and expand the root partition"
 truncate -s "${IMG_SIZE}" "${IMG_FILE}"
-
-sfdisk "${IMG_FILE}" <<EOF
-label: dos
-label-id: ${DISK_ID}
-unit: sectors
-
-start=2048, size=524288, type=c, bootable
-start=526336, type=83
-EOF
 
 LOOP_DEV="$(losetup -fP --show "${IMG_FILE}")"
 echo "==> Attached ${IMG_FILE} as ${LOOP_DEV}"
 
-mkfs.vfat -F32 -n BOOT "${LOOP_DEV}p1"
-mkfs.ext4 -F -L root "${LOOP_DEV}p2"
+# Base image's root partition (p2) only fills its own (much smaller) image;
+# grow it to claim the space added above.
+parted -s "${LOOP_DEV}" resizepart 2 100%
+partprobe "${LOOP_DEV}" 2>/dev/null || true
+udevadm settle 2>/dev/null || true
 
-# Mount root then boot (nested, as on the real device)
+e2fsck -f -y "${LOOP_DEV}p2" || true
+resize2fs "${LOOP_DEV}p2"
+
+# Mount root then boot (nested, as on the real device). RaspiOS (Bookworm+)
+# mounts the firmware/boot partition at /boot/firmware; older releases use
+# /boot directly. Detect which layout the base image uses.
 mount "${LOOP_DEV}p2" "${ROOTFS}"
-mkdir -p "${ROOTFS}/boot"
-mount "${LOOP_DEV}p1" "${ROOTFS}/boot"
-
-echo "==> Bootstrap minimal alpine root fs"
-"${APK_STATIC}" \
-    -X "${MIRROR}/main" -X "${MIRROR}/community" \
-    --arch "${ALPINE_ARCH}" -U --allow-untrusted \
-    --root "${ROOTFS}" --initdb add alpine-base
+if [ -d "${ROOTFS}/boot/firmware" ]; then
+    BOOT_MOUNT="${ROOTFS}/boot/firmware"
+else
+    BOOT_MOUNT="${ROOTFS}/boot"
+fi
+mkdir -p "${BOOT_MOUNT}"
+mount "${LOOP_DEV}p1" "${BOOT_MOUNT}"
 
 echo "==> Map chroot /tmp for memory backed build space"
 mkdir -p "${ROOTFS}/tmp"
@@ -111,9 +103,6 @@ mount -t tmpfs tmpfs "${ROOTFS}/tmp"
 echo "==> Mirror card_skeleton/ onto the rootfs"
 # No permissions are allowed here, since the boot partition doesn't support this
 rsync -a --no-owner --no-group "${SCRIPT_DIR}/card_skeleton/" "${ROOTFS}/"
-
-sed -i "s/__ALPINE_BRANCH__/${ALPINE_BRANCH}/g" "${ROOTFS}/etc/apk/repositories"
-chmod +x "${ROOTFS}/etc/init.d/sendspin"
 
 install -m 644 "${SCRIPT_DIR}/config/packages.txt" "${ROOTFS}/tmp/packages.txt"
 install -m 644 "${SCRIPT_DIR}/config/build-deps.txt" "${ROOTFS}/tmp/build-deps.txt"
@@ -130,10 +119,10 @@ mount -t proc proc "${ROOTFS}/proc"
 mount -t sysfs sysfs "${ROOTFS}/sys"
 mount --bind /dev "${ROOTFS}/dev"
 
-# Borrow the host's resolv.conf so DNS/apk work inside the chroot
+# Borrow the host's resolv.conf so DNS/apt work inside the chroot
 cp /etc/resolv.conf "${ROOTFS}/etc/resolv.conf"
 
-chroot "${ROOTFS}" /bin/sh /tmp/setup-chroot.sh
+chroot "${ROOTFS}" /bin/bash /tmp/setup-chroot.sh
 
 rm -f "${ROOTFS}/etc/resolv.conf"
 
@@ -149,23 +138,21 @@ if [ -f "${ROOTFS}/CREDENTIALS.txt" ]; then
     rm -f "${ROOTFS}/CREDENTIALS.txt"
 fi
 
-rm -f "${ROOTFS}/usr/bin/qemu-arm-static"
-
-# Do this at last to ensure boot of the pi
-echo "==> Re-apply config.txt / cmdline.txt"
-install -m 644 "${SCRIPT_DIR}/card_skeleton/boot/config.txt" "${ROOTFS}/boot/config.txt"
-install -m 644 "${SCRIPT_DIR}/card_skeleton/boot/cmdline.txt" "${ROOTFS}/boot/cmdline.txt"
+# Do this at last, additively, so nothing installed during the chroot step
+# (e.g. raspi-firmware package hooks) clobbers our tweaks.
+echo "==> Append audio/boot tuning to config.txt"
+cat "${SCRIPT_DIR}/config/config-append.txt" >> "${BOOT_MOUNT}/config.txt"
 
 echo "SASS version: ${SASS_VERSION}" > "${ROOTFS}/version-info"
 cp "${ROOTFS}/version-info" "${DIST_DIR}/version-info"
 
 echo "==> Shrink the image"
 # zero-fill boot free space, trim+zero root
-dd if=/dev/zero of="${ROOTFS}/boot/.zero" bs=1M 2>/dev/null || true
-rm -f "${ROOTFS}/boot/.zero"
+dd if=/dev/zero of="${BOOT_MOUNT}/.zero" bs=1M 2>/dev/null || true
+rm -f "${BOOT_MOUNT}/.zero"
 fstrim -v "${ROOTFS}" || true
 
-umount "${ROOTFS}/boot"
+umount "${BOOT_MOUNT}"
 umount "${ROOTFS}"
 
 e2fsck -f -y "${LOOP_DEV}p2" || true

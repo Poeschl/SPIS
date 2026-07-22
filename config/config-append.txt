@@ -1,0 +1,14 @@
+
+# --- SASS - Simple Appliance SendSpin System --- #
+# Appended to the RaspiOS Lite base config.txt, kept additive so we don't
+# clobber the kernel/overlay settings the base image already ships with.
+
+# Enable audio (onboard + required for USB audio class detection)
+dtparam=audio=on
+
+# Give the GPU minimal memory, headless audio appliance
+gpu_mem=16
+
+# Boot faster
+disable_splash=1
+boot_delay=0

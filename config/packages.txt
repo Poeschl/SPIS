@@ -1,38 +1,29 @@
-alpine-base
-openrc
-
-linux-rpi
-raspberrypi-bootloader
-raspberrypi-bootloader-common
-linux-firmware-brcm
-
-e2fsprogs
-dosfstools
-
-ifupdown-ng
-openssh
+openssh-server
 chrony
-wireless-regdb
 
 alsa-utils
-alsa-lib
+libasound2
 
 python3
-py3-pip
+python3-pip
+python3-venv
 
 gcc
-musl-dev
 python3-dev
-build-base
-linux-headers
-openblas-dev
+build-essential
+libopenblas-dev
 gfortran
-ffmpeg-dev
-pkgconfig
+libavformat-dev
+libavcodec-dev
+libavdevice-dev
+libavutil-dev
+libswscale-dev
+libswresample-dev
+pkg-config
 libffi-dev
-jpeg-dev
-zlib-dev
-portaudio-dev
-portaudio
+libjpeg-dev
+zlib1g-dev
+portaudio19-dev
+libportaudio2
 
 doas

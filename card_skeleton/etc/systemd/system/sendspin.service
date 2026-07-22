@@ -1,0 +1,15 @@
+[Unit]
+Description=SendSpin Audio Player
+Documentation=https://github.com/Sendspin/sendspin-cli
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/sendspin --headless
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

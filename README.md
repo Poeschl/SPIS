@@ -1,15 +1,15 @@
 # SASS
 
-Simple Alpine SendSpin
+Simple Appliance SendSpin System
 
-A minimal Alpine Linux image for Raspberry Pi that runs [SendSpin](https://github.com/Sendspin/sendspin-cli) - a high-quality audio streaming protocol for Home Assistant's Music Assistant.
+A minimal Raspberry Pi OS Lite image for Raspberry Pi that runs [SendSpin](https://github.com/Sendspin/sendspin-cli) - a high-quality audio streaming protocol for Home Assistant's Music Assistant.
 
 ## Features
 
-- **Minimal footprint** - Runs Alpine Linux in sys mode with only essential packages
+- **Minimal footprint** - Built on Raspberry Pi OS Lite with only essential packages installed
 - **Onboard audio by default** - Uses the Raspberry Pi's 3.5mm headphone jack out of the box, no extra hardware required
 - **Optional USB DAC support** - Switch to a USB audio device via `/etc/asound.conf` if you want higher-quality output
-- **Auto-start service** - SendSpin starts automatically on boot in headless mode
+- **Auto-start service** - SendSpin starts automatically on boot in headless mode via systemd
 - **Low latency** - Direct ALSA hardware access for minimal audio buffering
 - **Raspberry Pi optimized** - Built specifically for Pi 3/4 hardware
 
@@ -43,7 +43,7 @@ Use [Rufus](https://rufus.ie/)
 2. (Optional) Connect a USB DAC if you don't want to use the onboard headphone jack
 3. Power on
 4. The player will automatically connect to Music Assistant on your network
-5. Default credentials: `root` / `alpine` (change immediately!)
+5. Default credentials: `root` / a randomly generated password published alongside the release as `*-CREDENTIALS.txt` (change immediately!)
 
 ## Building from Source
 
@@ -71,17 +71,12 @@ This method is recommended if you want to:
 
 **Ethernet:** Works automatically via DHCP
 
-**WiFi:** SSH into the device and configure:
-```bash
-setup-interfaces
-rc-service networking restart
-```
+**WiFi:** SSH into the device and configure via `nmtui` or `nmcli` (NetworkManager, shipped with Raspberry Pi OS)
 
 ### Hostname
 
 ```bash
-setup-hostname mynewname
-rc-service hostname restart
+hostnamectl set-hostname mynewname
 ```
 
 ### Audio Device
@@ -90,30 +85,25 @@ By default, the system uses the onboard 3.5mm headphone jack (ALSA card `Headpho
 
 1. List audio devices: `aplay -l`
 2. Edit `/etc/asound.conf` and change `Headphones` to your device's card name or number
-3. Restart sendspin: `rc-service sendspin restart`
+3. Restart sendspin: `systemctl restart sendspin`
 
 ## Project Structure
 
 ```
 SASS/
-├── build.sh                    # Main build script (creates the SD card image)
+├── build.sh                    # Main build script (downloads + customizes the SD card image)
 ├── .github/workflows/
 │   └── build-image.yml         # CI: builds + releases the image on tag push
 ├── config/
-│   ├── packages.txt            # Top-level list of packages to install
-│   ├── build-deps.txt          # Build-only packages removed in slim builds
+│   ├── packages.txt            # Top-level list of apt packages to install
+│   ├── build-deps.txt          # Build-only apt packages removed in slim builds
+│   ├── config-append.txt       # Audio/boot tuning appended to config.txt
 │   └── setup-chroot.sh         # Non-interactive install, run inside the chroot
 ├── card_skeleton/               # Mirrors the target rootfs 1:1, rsync'd onto
 │   │                            # the image as-is (paths below == final paths)
-│   ├── etc/
-│   │   ├── apk/repositories     # branch placeholder substituted at build time
-│   │   ├── network/interfaces   # DHCP on eth0
-│   │   ├── init.d/sendspin      # OpenRC service script
-│   │   ├── asound.conf          # ALSA audio configuration
-│   │   └── fstab                #
-│   └── boot/
-│       ├── config.txt           # Raspberry Pi boot config
-│       └── cmdline.txt          #
+│   └── etc/
+│       ├── systemd/system/sendspin.service  # systemd service for sendspin
+│       └── asound.conf          # ALSA audio configuration
 └── dist/                       # Build artifacts (.img.xz, credentials)
 ```
 
@@ -130,10 +120,10 @@ buffer_size 16384
 
 ```bash
 # Check service status
-rc-service sendspin status
+systemctl status sendspin
 
 # View logs
-cat /var/log/messages | grep sendspin
+journalctl -u sendspin -e
 
 # Manual test
 sendspin --headless
@@ -156,5 +146,5 @@ dmesg | grep -i audio
 
 - [Tycho-MEC/SASS](https://github.com/Tycho-MEC/SASS) for the base of this fork
 - [SendSpin](https://github.com/Sendspin/sendspin-cli) by the SendSpin team
-- [Alpine Linux](https://alpinelinux.org/)
+- [Raspberry Pi OS](https://www.raspberrypi.com/software/)
 - [Home Assistant](https://www.home-assistant.io/) and [Music Assistant](https://music-assistant.io/)
