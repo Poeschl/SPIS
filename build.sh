@@ -132,7 +132,12 @@ mount -t proc proc "${ROOTFS}/proc"
 mount -t sysfs sysfs "${ROOTFS}/sys"
 mount --bind /dev "${ROOTFS}/dev"
 
+# Borrow the host's resolv.conf so DNS/apk work inside the chroot
+cp /etc/resolv.conf "${ROOTFS}/etc/resolv.conf"
+
 chroot "${ROOTFS}" /bin/sh /setup-chroot.sh
+
+rm -f "${ROOTFS}/etc/resolv.conf"
 
 umount -fl "${ROOTFS}/proc"
 umount -fl "${ROOTFS}/sys"
